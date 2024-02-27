@@ -45,6 +45,48 @@ const client = new MongoClient(uri, {
     const usersCollection = client.db("taskDb").collection("users");
     const tasksCollection = client.db("taskDb").collection("tasks");
 
+    app.post('/jwt', (req, res) => {
+        const user = req.body;
+        const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1hr' })
+        res.send({ token })
+      })
+  
+      const verifyAdmin = async (req, res, next) => {
+        const email = req.decoded.email;
+        const query = { email: email }
+        const user = await usersCollection.findOne(query);
+        if (user?.role !== 'admin') {
+          return res.status(403).send({ error: true, message: 'porbidden message' });
+        }
+        next();
+      }
+  
+    app.post('/users',async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email }
+      const existingUser = await usersCollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: 'user already exists' })
+      }
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+    app.get('/users', async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+//  all project
+app.post('/tasks', async (req, res) => {
+    const newItem = req.body;
+    const result = await tasksCollection.insertOne(newItem)
+    res.send(result);
+  })
+  app.get('/tasks',  async (req, res) => {
+    const result = await tasksCollection.find().toArray();
+    res.send(result);
+  });
+
+
       // Connect the client to the server	(optional starting in v4.7)  
 //   const usersCollection = client.db("projectDb").collection("users");
 console.log("Pinged your deployment. You successfully connected to MongoDB!");
